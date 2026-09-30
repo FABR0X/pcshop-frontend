@@ -96,20 +96,39 @@ signed in.
 ## When the five minutes run out
 
 Tokens last five minutes, so a session ending is a normal event rather than an
-error, and it has to be handled in the two places a lapse can be noticed:
+error. Expiry can be noticed in three places, and no single one of them covers
+the whole surface:
 
 | What the user did | What notices it | Where |
 |---|---|---|
 | Pressed a button that calls the API | The `401 TOKEN_EXPIRED` answer | `src/api/client.js` response interceptor |
 | Clicked a nav link | Nothing — no request is made | `RequireAuth` reading the `exp` claim |
+| Searched, filtered, sorted or opened a dialog | Nothing at all | `useSessionExpiry` on local state |
 
-The second row is the one that is easy to miss. A link click issues no request,
-so the HTTP layer has nothing to react to, and the user would walk into a new
-page whose first fetch is a guaranteed `401` — surfacing as a confusing error on
-an unrelated page. `RequireAuth` therefore compares `exp` against the clock on
-every navigation.
+The last two rows are the ones that are easy to miss, for the same reason: the
+interaction issues no request, so the HTTP layer has nothing to react to, and
+the user is still on the same route, so the guard does not re-run. Left
+unhandled they are both confusing in the same way — the user keeps working a
+session that died five minutes ago, and the lapse only surfaces later as a `401`
+on some unrelated page.
 
-Both routes converge on the same store action, so the outcome is identical: the
+So the rule is deliberately not "when the clock runs out" but **"when the user
+touches something"**. A background timer would catch more cases, and it would
+also eject someone in the middle of typing, so expiry is checked on interaction
+instead. `RequireAuth` covers the route change; `useSessionExpiry` covers
+interactions that only move local state:
+
+```js
+useSessionExpiry(`${query}|${category}|${sort}|${pendingDelete?.id ?? ""}`);
+```
+
+One call covers the catalogue's four local controls, because all of them move the
+same state — a `useMemo` over products already in memory
+(`Dashboard.jsx`). The argument is a single primitive rather than a rest
+parameter, so the dependency array keeps a fixed length and `rules-of-hooks` can
+check the call.
+
+All three routes converge on the same store action, so the outcome is identical:
 token is removed from `localStorage` and the login screen appears saying *why*.
 `TOKEN_EXPIRED` and `TOKEN_INVALID` produce different wording, because one means
 "this session ran out" and the other "this token is not one we can trust".

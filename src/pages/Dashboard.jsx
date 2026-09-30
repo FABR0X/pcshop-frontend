@@ -1,5 +1,6 @@
 import { useDeferredValue, useMemo, useState } from "react";
 import { useCatalog } from "../hooks/useCatalog";
+import { useSessionExpiry } from "../hooks/useSessionExpiry";
 import { AppShell } from "../components/AppShell";
 import { ProductCard } from "../components/ProductCard";
 import { TokenInspector } from "../components/TokenInspector";
@@ -36,6 +37,17 @@ export function Dashboard() {
     // Typing stays responsive: the input updates on every keystroke while the
     // (more expensive) filter runs against a deferred copy of the value.
     const deferredQuery = useDeferredValue(query);
+
+    // Searching, filtering and sorting are all local — `visible` below is a
+    // useMemo over products already in memory — so none of them issues a request
+    // for the 401 interceptor to catch, and none of them leaves the route for
+    // the guard to catch either. One hook covers all three because all three
+    // move the same local state.
+    //
+    // `pendingDelete` is here too: opening the delete dialog is also only local
+    // state. Confirming it does call the API, but that is a click later, and
+    // the whole point is not to let someone keep working a dead session.
+    useSessionExpiry(`${query}|${category}|${sort}|${pendingDelete?.id ?? ""}`);
 
     const visible = useMemo(() => {
         const needle = deferredQuery.trim().toLowerCase();

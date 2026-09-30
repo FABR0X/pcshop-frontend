@@ -100,7 +100,7 @@
 .brand__mark--lg {
     width: 40px;
     height: 40px;
-    border-radius: 8px;
+    border-radius: var(--radius-tile);
 }
 
 .brand__name {
@@ -271,18 +271,27 @@
     color: var(--text-muted);
 }
 
+/*
+ * Focus is left to the global `:focus-visible` ring in styles/index.css.
+ *
+ * An earlier version overrode it here with `outline: none` plus a
+ * box-shadow at 0.06 alpha, which is roughly 1.4:1 against the white input
+ * background and applied to mouse clicks too, since `:focus` matches both.
+ * `.input:focus` also outranks a bare `:focus-visible`, so the suppression won
+ * everywhere and keyboard users were left with a ring they could barely see.
+ * A soft box-shadow is kept only for pointer interaction, where it reads as a
+ * filled field rather than a focus indicator.
+ */
 .input:hover {
     border-color: var(--text-muted);
 }
 
 .input:focus {
-    outline: none;
-    border-color: var(--text);
     box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.06);
 }
 
 .input:focus-visible {
-    outline: none;
+    border-color: var(--text);
 }
 
 .input[aria-invalid="true"] {
@@ -731,27 +740,30 @@ select.input {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius-card);
-    transition:
-        border-color var(--dur) var(--ease),
-        box-shadow var(--dur) var(--ease);
+    transition: border-color var(--dur) var(--ease);
 }
 
+/*
+ * Border only, no lift. The card body is not clickable, so a shadow raise would
+ * advertise an affordance that is not there. The hover cue that matters is the
+ * one on the delete button inside it.
+ */
 .product:hover {
     border-color: var(--border-strong);
-    box-shadow: var(--shadow-hover);
 }
 
+/*
+ * A plain container, not a button — see the note in ProductCard.jsx. It no
+ * longer needs the button resets (background, border, text-align, cursor).
+ */
 .product__main {
     flex: 1;
     display: flex;
     gap: 14px;
     padding: 18px;
-    background: none;
-    border: 0;
-    border-radius: var(--radius-card);
-    text-align: left;
-    cursor: pointer;
-}
+    min-width: 0;
+    }
+
 
 .product__icon {
     flex-shrink: 0;
@@ -759,7 +771,7 @@ select.input {
     place-items: center;
     width: 42px;
     height: 42px;
-    border-radius: 8px;
+    border-radius: var(--radius-tile);
 }
 
 .product__body {
@@ -900,7 +912,7 @@ select.input {
 .skeleton--icon {
     width: 42px;
     height: 42px;
-    border-radius: 8px;
+    border-radius: var(--radius-tile);
     flex-shrink: 0;
 }
 
@@ -938,7 +950,7 @@ select.input {
     width: 46px;
     height: 46px;
     margin-bottom: 4px;
-    border-radius: 8px;
+    border-radius: var(--radius-tile);
     background: var(--surface-sunken);
     border: 1px solid var(--border);
     color: var(--text-muted);

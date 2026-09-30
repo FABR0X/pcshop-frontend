@@ -44,8 +44,17 @@
     --text-3xl: 2.25rem;
 
     /* ---- Shape ----------------------------------------------------- */
-    /* One radius scale, applied everywhere: cards 12, controls 6, tags pill. */
+    /*
+     * One radius scale, applied everywhere: controls 6, icon tiles 8, cards 12,
+     * tags pill. Nothing hardcodes a radius.
+     *
+     * The tiles are their own step rather than a rounding of the card: a 42px
+     * glyph tile inside a 12px card needs more rounding than a 30px button does,
+     * but less than the card itself, and 8px is what keeps that relationship
+     * reading as one family.
+     */
     --radius-control: 6px;
+    --radius-tile: 8px;
     --radius-card: 12px;
     --radius-tag: 9999px;
 

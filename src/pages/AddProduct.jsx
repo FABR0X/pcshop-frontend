@@ -230,7 +230,8 @@ export function AddProduct() {
                                 {saving ? (
                                     <>
                                         <SpinnerGap className="spin" size={16} weight="bold" />
-                                        Saving
+                                            Saving…
+
                                     </>
                                 ) : (
                                     <>

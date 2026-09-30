@@ -57,23 +57,23 @@ function humaniseKey(key) {
 /**
  * One product, as a card.
  *
- * The detail area is a real button rather than a div with an onClick, so it is
- * reachable by keyboard, announced as actionable, and keeps the focus ring
- * aligned with the thing it activates.
+ * The card body is deliberately not a button. There is no detail view in this
+ * deliverable, so a button here would be a control that announces "View
+ * GeForce RTX 4070 Super", takes focus, and then does nothing on activation.
+ * Delete is the only action, and it is a real `<button>` with its own label, so
+ * the tab order is one stop per card instead of two stops where one is inert.
+ *
+ * A plain container is also what keeps the hover treatment honest: the card
+ * lifts slightly on hover, and a lift implies "you can interact with this".
  */
-export function ProductCard({ product, onDelete, onSelect }) {
+export function ProductCard({ product, onDelete }) {
     const Icon = CATEGORY_ICON[product.category] ?? Cube;
     const tone = categoryTone(product.category);
     const specs = specPairs(product.specs);
 
     return (
         <article className="product">
-            <button
-                type="button"
-                className="product__main"
-                onClick={() => onSelect?.(product)}
-                aria-label={`View ${product.name}`}
-            >
+            <div className="product__main">
                 <span className="product__icon" style={{ background: tone.bg, color: tone.fg }}>
                     <Icon size={22} weight="bold" />
                 </span>
@@ -113,7 +113,7 @@ export function ProductCard({ product, onDelete, onSelect }) {
                         ) : null}
                     </span>
                 </span>
-            </button>
+            </div>
 
             {onDelete ? (
                 <div className="product__actions">

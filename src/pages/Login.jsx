@@ -121,7 +121,7 @@ export function Login() {
                             {submitting ? (
                                 <>
                                     <SpinnerGap className="spin" size={16} weight="bold" />
-                                    Signing in
+                                    Signing in…
                                 </>
                             ) : (
                                 <>

@@ -33,8 +33,31 @@ const FLOW = [
     },
 ];
 
+/*
+ * Why the user landed here, when it was not their choice.
+ *
+ * `null` means they simply opened the app, which is not the same as having
+ * been signed out from under them, so it gets no banner at all.
+ */
+const ENDED_SESSION_COPY = {
+    expired: {
+        title: "Your session expired",
+        body: "The token ran out while you were signed in. Sign in again to get a new one — nothing you saved is affected.",
+    },
+    invalid: {
+        title: "Your session was refused",
+        body: "The API rejected the token that was stored in this browser. Sign in again to continue.",
+    },
+    signedout: {
+        title: "Signed out",
+        body: "Your session was closed and the token was deleted from this browser.",
+    },
+};
+
 export function Login() {
     const login = useAuthStore((state) => state.login);
+    const endedReason = useAuthStore((state) => state.sessionEndedReason);
+    const clearEndedReason = useAuthStore((state) => state.clearSessionEndReason);
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -44,11 +67,18 @@ export function Login() {
     const [submitting, setSubmitting] = useState(false);
 
     const destination = location.state?.from ?? "/";
+    const ended = endedReason ? ENDED_SESSION_COPY[endedReason] : null;
 
     async function handleSubmit(event) {
         event.preventDefault();
         setError(null);
         setSubmitting(true);
+
+        // The reason explains why the user was sent here, so it stays on screen
+        // until they act on it. Clearing it on mount instead would drop the
+        // banner after a single frame, and clearing it only on submit is what
+        // keeps it from lingering above a wrong-password error.
+        if (endedReason) clearEndedReason();
 
         const result = await login(username.trim(), password);
         setSubmitting(false);
@@ -78,6 +108,13 @@ export function Login() {
 
                 <Reveal delay={80}>
                     <form className="form" onSubmit={handleSubmit} noValidate>
+                        {ended ? (
+                            <div className="alert alert--notice" role="status">
+                                <strong>{ended.title}</strong>
+                                <span>{ended.body}</span>
+                            </div>
+                        ) : null}
+
                         {error ? (
                             <p className="alert" role="alert">
                                 {error}

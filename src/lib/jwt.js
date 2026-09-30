@@ -45,20 +45,28 @@ export function readClaims(token) {
 }
 
 /**
- * "1 h 04 min" style countdown, for the session panel.
+ * "4 min 07 s" / "1 h 04 min" style countdown, for the session panel.
  *
  * `now` is passed in rather than read from the clock, so the caller controls
  * when the value changes and this stays a pure function of its arguments.
+ *
+ * Below an hour the seconds are shown, because the token is short by design: at
+ * a five minute lifetime a whole-minute display sits on "1 min" for the whole
+ * last minute, which hides exactly the moment the user is waiting for.
  */
 export function formatRemaining(expiresAt, now = Date.now()) {
     if (!expiresAt) return "unknown";
     const ms = expiresAt - now;
     if (ms <= 0) return "expired";
 
-    const totalMinutes = Math.floor(ms / 60_000);
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-    return hours > 0 ? `${hours} h ${String(minutes).padStart(2, "0")} min` : `${minutes} min`;
+    const totalSeconds = Math.ceil(ms / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    if (hours > 0) return `${hours} h ${String(minutes).padStart(2, "0")} min`;
+
+    return `${minutes} min ${String(seconds).padStart(2, "0")} s`;
 }
 
 export function formatTimestamp(ms) {

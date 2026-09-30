@@ -15,7 +15,13 @@ export function bindTokenSource(source) {
     tokenSource = source;
 }
 
-/** Called by the auth store when the server rejects the token. */
+/**
+ * Called by the auth store when the server rejects the token.
+ *
+ * Receives the API error code so the store can tell an elapsed session
+ * (`TOKEN_EXPIRED`) from a token that is merely not accepted
+ * (`TOKEN_INVALID`) and say so on the login screen.
+ */
 let onUnauthorized = () => {};
 export function bindUnauthorizedHandler(handler) {
     onUnauthorized = handler;
@@ -69,7 +75,7 @@ api.interceptors.response.use(
         // centrally, instead of at every call site.
         if (response.status === 401 && response.data?.code !== "BAD_PASSWORD" &&
             response.data?.code !== "USER_NOT_FOUND") {
-            onUnauthorized();
+            onUnauthorized(response.data?.code);
         }
 
         return Promise.reject(error);

@@ -49,7 +49,8 @@ signed JWT comes back. The SPA's job is to hold that token and re-present it.
 ```
 POST /api/auth/login { username, password }
   → 200 { token, user: { handle, displayName } }
-  → every later call:  Authorization: Bearer <token>
+  → every later call:  Authorization: Bearer <jwt>
+  → the jwt carries an exp five minutes out, shown as a live countdown
 ```
 
 The login page spells this flow out in four steps, because for this assignment
@@ -91,6 +92,42 @@ redirects to login. The exception is `BAD_PASSWORD` and `USER_NOT_FOUND` — tho
 are a `401` about *this* login attempt, not a dead session. Without the
 exception, typing a wrong password would log out the person who was already
 signed in.
+
+## When the five minutes run out
+
+Tokens last five minutes, so a session ending is a normal event rather than an
+error, and it has to be handled in the two places a lapse can be noticed:
+
+| What the user did | What notices it | Where |
+|---|---|---|
+| Pressed a button that calls the API | The `401 TOKEN_EXPIRED` answer | `src/api/client.js` response interceptor |
+| Clicked a nav link | Nothing — no request is made | `RequireAuth` reading the `exp` claim |
+
+The second row is the one that is easy to miss. A link click issues no request,
+so the HTTP layer has nothing to react to, and the user would walk into a new
+page whose first fetch is a guaranteed `401` — surfacing as a confusing error on
+an unrelated page. `RequireAuth` therefore compares `exp` against the clock on
+every navigation.
+
+Both routes converge on the same store action, so the outcome is identical: the
+token is removed from `localStorage` and the login screen appears saying *why*.
+`TOKEN_EXPIRED` and `TOKEN_INVALID` produce different wording, because one means
+"this session ran out" and the other "this token is not one we can trust".
+
+Two details that are easy to get wrong:
+
+- **The reason is not cleared on mount.** It is held until the user acts, so the
+  banner is actually readable. Clearing it in a `useEffect` on mount drops it
+  after a single frame, and clearing it only after a failed submit leaves a stale
+  "your session expired" sitting above the wrong-password error.
+- **The banner is styled as information, not as an error.** Someone who left the
+  tab open for five minutes has done nothing wrong, so it uses the blue
+  informational treatment rather than the red one reserved for a failed sign-in.
+
+A hard refresh on the login screen loses the reason, since it is kept in memory
+rather than persisted. That is deliberate: the alternative is writing "your
+session expired" to `localStorage` and clearing it later, which outlives the
+moment it describes.
 
 ## API surface used
 

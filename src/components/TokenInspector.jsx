@@ -22,11 +22,29 @@ function SessionClock({ expiresAt }) {
     const [now, setNow] = useState(() => Date.now());
 
     useEffect(() => {
-        // 30s is finer than the "1 h 00 min" display can show, and a
-        // twice-a-minute re-render is invisible next to a once-a-second one.
-        const id = setInterval(() => setNow(Date.now()), 30_000);
-        return () => clearInterval(id);
-    }, []);
+        // Tick every second for the last two minutes so the countdown actually
+        // reaches zero on screen, and every 30s before that, where the display
+        // has minute granularity and a per-second re-render buys nothing.
+        function intervalFor() {
+            const remaining = (expiresAt ?? 0) - Date.now();
+            return remaining < 120_000 ? 1_000 : 30_000;
+        }
+
+        let id = setInterval(() => setNow(Date.now()), intervalFor());
+
+        // Re-evaluate when the threshold is crossed, so a long-lived session
+        // speeds up on its own instead of needing a component remount.
+        const id2 = setInterval(() => {
+            const next = intervalFor();
+            clearInterval(id);
+            id = setInterval(() => setNow(Date.now()), next);
+        }, 30_000);
+
+        return () => {
+            clearInterval(id);
+            clearInterval(id2);
+        };
+    }, [expiresAt]);
 
     const expired = !expiresAt || expiresAt <= now;
 

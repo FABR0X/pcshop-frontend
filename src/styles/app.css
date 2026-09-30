@@ -368,6 +368,30 @@ select.input {
     font-size: var(--text-sm);
 }
 
+/*
+ * An elapsed session is information, not a failure, so it does not reuse the red
+ * error treatment — a user who simply left the tab open for a few minutes
+ * should not be met with an alarming box. Blue is already the informational
+ * accent here (it is also the focus ring colour), and the pair clears 5:1.
+ *
+ * Stacked, because it carries a title and a sentence rather than one line.
+ */
+.alert--notice {
+    display: grid;
+    gap: 3px;
+    background: var(--pastel-blue-bg);
+    border-color: var(--pastel-blue-fg);
+    color: var(--pastel-blue-fg);
+}
+
+.alert--notice strong {
+    font-weight: 600;
+}
+
+.alert--notice span {
+    color: var(--text-secondary);
+}
+
 .form {
     display: flex;
     flex-direction: column;

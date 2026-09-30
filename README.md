@@ -1,21 +1,30 @@
 # pcshop-frontend
 
-SPA de React para el catálogo de componentes de PC. Es el **primer repo** del
-entregable: es la única superficie que el usuario toca, y la que emite el header
-`Authorization: Bearer <jwt>` en cada request.
+React SPA for the PC component catalogue. This is the **first repo** of the
+deliverable: the only surface the user touches, and the one that puts the
+`Authorization: Bearer <jwt>` header on every request.
 
-## Arrancar
+| | |
+|---|---|
+| Stack | React 19, Vite 8, React Router 7, Axios, Zustand, Phosphor icons |
+| Local URL | <http://localhost:8081> (via nginx) or <http://localhost:5173> (dev server) |
+| Talks to | `/api` — same origin, reverse-proxied to `pcshop-backend` |
+| Sibling repos | [`pcshop-backend`](../pcshop-backend) · [`pcshop-ldap`](../pcshop-ldap) |
 
-El compose vive en `pcshop-backend/` porque tiene que referenciar los otros dos
-repos. Desde ahí:
+## Run it
+
+The compose file lives in `pcshop-backend/` because it has to reference the other
+two repos. From there:
 
 ```powershell
 docker compose up -d --build
 ```
 
-Y abrir <http://localhost:8081>.
+Then open <http://localhost:8081>.
 
-Para desarrollo con HMR, con la API corriendo aparte:
+Seeded accounts: `juan` / `LabPass-@juan` and `maria` / `LabPass-@maria`.
+
+For HMR development, with the API running separately in Docker:
 
 ```powershell
 npm install
@@ -24,86 +33,116 @@ npm run dev        # http://localhost:5173, /api proxied to :4000
 
 ## Scripts
 
-| Script | Qué hace |
+| Script | What it does |
 |---|---|
-| `npm run dev` | Vite dev server con HMR y proxy `/api` → `http://localhost:4000` |
-| `npm run build` | Build de producción en `dist/` (target ES2022) |
-| `npm run preview` | Sirve `dist/` localmente, sin el proxy de nginx |
-| `npm run lint` | Oxlint sobre `src/` |
+| `npm run dev` | Vite dev server with HMR and a `/api` proxy → `http://localhost:4000` |
+| `npm run build` | Production build into `dist/` (target ES2022) |
+| `npm run preview` | Serves `dist/` locally, without the nginx proxy |
+| `npm run lint` | Oxlint over `src/` |
 
-## Sesión
+## How authentication works
 
-El token vive en `localStorage` bajo la clave **`pcshop.session`** y el único
-módulo que lo toca es `src/lib/storage.js`:
+The browser never talks to OpenLDAP. It posts credentials to
+`POST /api/auth/login`, the API binds against the directory, and on success a
+signed JWT comes back. The SPA's job is to hold that token and re-present it.
+
+```
+POST /api/auth/login { username, password }
+  → 200 { token, user: { handle, displayName } }
+  → every later call:  Authorization: Bearer <token>
+```
+
+The login page spells this flow out in four steps, because for this assignment
+the flow is the point, not the catalogue.
+
+## Session storage
+
+The token lives in `localStorage` under the key **`pcshop.session`**, and
+`src/lib/storage.js` is the only module that touches it:
 
 ```json
 { "v": 1, "token": "<jwt>", "user": { "handle": "juan", "displayName": "Juan Perez" } }
 ```
 
-`v` es un versión de esquema: si algún día el shape cambia, subirlo descarta las
-sesiones viejas en vez de hidratar un objeto que la app ya no entiende.
+`v` is a schema version. If the shape ever changes, bumping it discards old
+sessions instead of hydrating an object the app no longer understands.
 
-Nada más en la app lee o escribe `localStorage`, y nada más en la app lee o
-escribe el token — `authStore` es el único dueño. Eso evita que dos componentes
-se desincronicen sobre si hay sesión.
+Nothing else in the app reads or writes `localStorage`, and nothing else reads
+or writes the token — `authStore` is the single owner. That is what stops two
+components from disagreeing about whether a session exists.
 
-### El refresh es el momento de la verdad
+### Refreshing is the real test
 
-Un JWT en `localStorage` sobrevive al refresh, y ese es justamente el problema:
-puede seguir ahí un token expirado o revocado. `main.jsx` lanza `bootstrap()`
-antes de renderizar nada, y `bootstrap()` valida el token guardado contra
-`GET /api/auth/me`. Recién después se decide qué ruta pintar.
+A JWT in `localStorage` survives a refresh, and that is exactly the problem: an
+expired or revoked token can still be sitting there. `main.jsx` calls
+`bootstrap()` before rendering anything, and `bootstrap()` revalidates the
+stored token against `GET /api/auth/me`. Only then does the router decide what
+to paint.
 
-Por eso los guards tienen una rama de carga explícita: sin ella, un F5 en
-`/products` expulsaría al usuario al login durante el vuelo del request, y
-volvería a `/products` al completarse. El usuario vería un parpadeo de login en
-cada refresh.
+That is also why the route guards have an explicit loading branch. Without it, a
+hard refresh on `/products` would bounce the user to the login screen for the
+duration of the request, then back to `/products` when it resolved — a visible
+flash of the login page on every refresh.
 
-## Un 401 central, con una excepción
+## One central 401 handler, with one exception
 
-`src/api/client.js` centraliza la expiración de sesión: ante un `401` borra el
-token y manda al login. La excepción son `BAD_PASSWORD` y `USER_NOT_FOUND`, que
-son un `401` de *ese* intento de login y no una sesión muerta — sin esta
-excepción, escribir una contraseña incorrecta cerraría la sesión de la persona
-que ya estaba conectada.
+`src/api/client.js` owns session expiry: on a `401` it clears the token and
+redirects to login. The exception is `BAD_PASSWORD` and `USER_NOT_FOUND` — those
+are a `401` about *this* login attempt, not a dead session. Without the
+exception, typing a wrong password would log out the person who was already
+signed in.
 
-## Evidencia de demo
+## API surface used
 
-- `TokenInspector` muestra el token vivo, sus claims y la cuenta regresiva de
-  expiración.
-- El interceptor de Axios loguea el `Authorization` exacto de cada request
-  saliente, y el request logger del backend responde con el `sub` que extrajo de
-  ese token. Juntos son la prueba de que el mismo JWT viaja en ambas puntas y de
-  que el servidor lo leyó — sin necesidad de loguear el token en el servidor.
-- `src/components/ProductCard.jsx` y el panel de sesión son las piezas que
-  aparecen en el video.
+| Endpoint | Used for |
+|---|---|
+| `POST /api/auth/login` | Sign in, returns the token |
+| `GET /api/auth/me` | Revalidate the stored token on boot |
+| `GET /api/products` | Catalogue; supports `?q=` and `?category=` |
+| `GET /api/categories` | Category vocabulary for the form and filters |
+| `POST /api/products` | Create a component |
+| `DELETE /api/products/:id` | Delete a component |
+
+Every call except login carries the Bearer header. `created_by` is never sent
+from the browser — the API reads it from the verified token, so a client cannot
+attribute a row to somebody else.
+
+## Demo evidence
+
+- `TokenInspector` shows the live token, its claims, and a countdown to expiry.
+- The Axios interceptor logs the exact `Authorization` header of every outgoing
+  request, and the backend request logger answers with the `sub` it extracted
+  from that token. Together they show the same JWT travelling in both directions
+  and the server reading it — without the server ever logging the token itself.
+- `src/components/ProductCard.jsx` and the session panel are the pieces that
+  appear in the video.
 
 ## Docker
 
-`Dockerfile` es multi-stage: build con Node, runtime con nginx. `nginx.conf`
-hace tres cosas — servir `index.html` con `no-cache` (para que un deploy nuevo
-se vea sin hard refresh), cachear los assets con hash de nombre en
-`immutable`, y reverse-proxear `/api` a `http://backend:3000` de modo que el
-frontend no necesita saber la URL del backend ni CORS.
+`Dockerfile` is multi-stage: build with Node, runtime with nginx. `nginx.conf`
+does three things — serves `index.html` with `no-cache` (so a new deploy shows up
+without a hard refresh), caches content-hashed assets as `immutable`, and
+reverse-proxies `/api` to `http://backend:3000` so the frontend never needs to
+know the backend's URL and never needs CORS.
 
-## Estructura
+## Structure
 
 ```
 src/
-├── main.jsx              bootstrap de sesión antes del render
-├── App.jsx               rutas (AddProduct lazy)
-├── api/client.js         Axios + Bearer + 401 central
-├── store/authStore.js    dueño único del token
-├── lib/storage.js        la única frontera con localStorage
-├── lib/jwt.js            decode de claims, expiración, formato
-├── auth/                 RequireAuth / RedirectIfAuthed
-├── pages/                Login, Dashboard, AddProduct
-├── components/           UI + ProductCard + TokenInspector
-├── hooks/useCatalog.js   carga products y categories en paralelo
-├── styles/               tokens, base, componentes
-└── constants/categories.js   fallback si /categories no responde
+├── main.jsx                  session bootstrap before the first render
+├── App.jsx                   routes (AddProduct lazy-loaded)
+├── api/client.js             Axios + Bearer + the central 401
+├── store/authStore.js        the single owner of the token
+├── lib/storage.js            the only boundary with localStorage
+├── lib/jwt.js                claim decoding, expiry, formatting
+├── auth/                     RequireAuth / RedirectIfAuthed
+├── pages/                    Login, Dashboard, AddProduct
+├── components/               UI + ProductCard + TokenInspector
+├── hooks/useCatalog.js       loads products and categories in parallel
+├── styles/                   tokens, base, components
+└── constants/categories.js   fallback if /categories is unavailable
 ```
 
-`useCatalog` usa `Promise.allSettled`: si `/categories` cae, el catálogo sigue
-siendo usable con el vocabulario de respaldo en vez de dejar la pantalla en
-error.
+`useCatalog` uses `Promise.allSettled`: if `/categories` fails, the catalogue
+stays usable with the fallback vocabulary instead of dropping the whole screen
+into an error state.

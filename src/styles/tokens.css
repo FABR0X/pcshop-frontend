@@ -1,0 +1,91 @@
+/*
+ * Design tokens. Single source of truth for colour, type, spacing and motion.
+ * Components never hard-code a hex value.
+ *
+ * Direction: warm monochrome + muted pastel accents, flat surfaces, hairline
+ * borders. Colour is reserved for meaning (category, status), never decoration.
+ */
+
+:root {
+    /* ---- Surfaces -------------------------------------------------- */
+    --canvas: #f7f6f3;
+    --surface: #ffffff;
+    --surface-sunken: #fbfbfa;
+    --border: #eaeaea;
+    --border-strong: #d8d8d4;
+
+    /* ---- Text ------------------------------------------------------ */
+    --text: #111111;
+    --text-secondary: #2f3437;
+    --text-muted: #787774;
+
+    /* ---- Muted pastel accents (tags, status) ----------------------- */
+    --pastel-blue-bg: #e1f3fe;
+    --pastel-blue-fg: #1f6c9f;
+    --pastel-green-bg: #edf3ec;
+    --pastel-green-fg: #346538;
+    --pastel-yellow-bg: #fbf3db;
+    --pastel-yellow-fg: #956400;
+    --pastel-red-bg: #fdebec;
+    --pastel-red-fg: #9f2f2d;
+
+    /* ---- Type ------------------------------------------------------ */
+    --font-sans: "Geist Sans", "SF Pro Display", -apple-system, BlinkMacSystemFont,
+        "Segoe UI Variable Text", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    --font-mono: "Geist Mono", "JetBrains Mono", "Cascadia Code", "SF Mono", Consolas,
+        "Liberation Mono", monospace;
+
+    --text-xs: 0.75rem;
+    --text-sm: 0.875rem;
+    --text-base: 0.9375rem;
+    --text-lg: 1.0625rem;
+    --text-xl: 1.375rem;
+    --text-2xl: 1.75rem;
+    --text-3xl: 2.25rem;
+
+    /* ---- Shape ----------------------------------------------------- */
+    /* One radius scale, applied everywhere: cards 12, controls 6, tags pill. */
+    --radius-control: 6px;
+    --radius-card: 12px;
+    --radius-tag: 9999px;
+
+    /* ---- Layout ---------------------------------------------------- */
+    --nav-h: 64px;
+    --container: 1180px;
+    --gutter: 24px;
+
+    /* ---- Motion ---------------------------------------------------- */
+    /* One easing curve everywhere. Durations are short on purpose. */
+    --ease: cubic-bezier(0.16, 1, 0.3, 1);
+    --dur-fast: 160ms;
+    --dur: 260ms;
+    --dur-reveal: 600ms;
+
+    /* ---- Elevation ------------------------------------------------- */
+    /* Practically invisible; the only shadow in the system. */
+    --shadow-hover: 0 2px 8px rgba(17, 17, 17, 0.04);
+
+    --focus-ring: 2px solid #1f6c9f;
+    --focus-offset: 2px;
+}
+
+/*
+ * Respect the OS setting: collapse every transition and animation, including
+ * the reveal-on-scroll, so nothing moves for users who asked for stillness.
+ */
+@media (prefers-reduced-motion: reduce) {
+    :root {
+        --dur-fast: 0ms;
+        --dur: 0ms;
+        --dur-reveal: 0ms;
+    }
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
